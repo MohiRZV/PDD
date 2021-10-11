@@ -1,44 +1,17 @@
 #include "ConvolutionLogic.h"
+#include <vector>
 
 void ConvolutionLogic::run(int noOfThreads) {
 	read();
+	/*kernelSize = 3;
+	pixelMatrixMSize = 6;
+	pixelMatrixNSize = 6;*/
 	runConvolutionMain(noOfThreads);
 }
 
 void ConvolutionLogic::read() {
 	readPixelMatrixFromFile();
 	readKernelFromFile();
-}
-
-void ConvolutionLogic::runConvolutionMain(int noOfThreads) {
-	int border = kernelSize / 2;
-	borderMatrix(border);
-	
-	//create the threads
-	thread t[10];
-	//split the work
-	int elements = pixelMatrixNSize * pixelMatrixMSize;
-	int start = 0, end = 0;
-	int chunk = elements / noOfThreads;
-	int remainder = elements % noOfThreads;
-	for (int i = 0; i < noOfThreads; i++) {
-		end = start + chunk + (remainder-->0);
-		//TODO
-		t[i] = thread(doWork, start, end);
-	}
-
-	for (int i = 0; i < noOfThreads; i++) {
-		t[i].join();
-	}
-	writeOutputMatrixToFile();
-}
-
-int getColumn(int i, int columns) {
-	return i % columns;
-}
-
-int getLine(int i, int lines) {
-	return i / lines;
 }
 
 int ConvolutionLogic::computeConvolution(int line, int column) {
@@ -49,13 +22,7 @@ int ConvolutionLogic::computeConvolution(int line, int column) {
 	return rez;
 }
 
-void ConvolutionLogic::doWork(int start, int end) {
-	for (int i = start; i < end; i++) {
-		int line = getLine(i, pixelMatrixNSize);
-		int column = getColumn(i, pixelMatrixMSize);
-		newPixelMatrix[line][column] = computeConvolution(line, column);
-	}
-}
+
 
 void ConvolutionLogic::borderMatrix(int border) {
 	int lines = pixelMatrixNSize;
@@ -64,19 +31,20 @@ void ConvolutionLogic::borderMatrix(int border) {
 	//top and bottom rows
 	for (int i = 0; i < border; i++) {
 		//first @border elements (corners)
+		int col = 0;
 		for (int j = 0; j < border; j++) {
-			borderedMatrix[i][j] = pixelMatrix[0][0];
-			borderedMatrix[i + border + lines][j] = pixelMatrix[lines - 1][0];
+			borderedMatrix[i][col] = pixelMatrix[0][0];
+			borderedMatrix[i + border + lines][col++] = pixelMatrix[lines - 1][0];
 		}
 		for (int j = 0; j < columns; j++) {
-			borderedMatrix[i][j] = pixelMatrix[0][j];
-			borderedMatrix[i + border + lines][j] = pixelMatrix[lines - 1][j];
+			borderedMatrix[i][col] = pixelMatrix[0][j];
+			borderedMatrix[i + border + lines][col++] = pixelMatrix[lines - 1][j];
 		}
 		//last @border elements (corners)
-		for (int j = 0; j < border; j++) {
-			borderedMatrix[i][j] = pixelMatrix[0][columns-1];
-			borderedMatrix[i + border + lines][j] = pixelMatrix[lines - 1][columns - 1];
-		}
+		/*for (int j = 0; j < border; j++) {
+			borderedMatrix[i][col] = pixelMatrix[0][columns-1];
+			borderedMatrix[i + border + lines][col++] = pixelMatrix[lines - 1][columns - 1];
+		}*/
 	}
 	//the rest of the matrix
 	for (int i = 0; i < lines; i++) {
@@ -91,6 +59,11 @@ void ConvolutionLogic::borderMatrix(int border) {
 			borderedMatrix[i + border][col++] = pixelMatrix[i][columns-1];
 		}
 	}
+	/*for (int i = 0; i < pixelMatrixNSize + border * 2; i++) {
+		for (int j = 0; j < pixelMatrixMSize + border * 2; j++)
+			cout << borderedMatrix[i][j] << ' ';
+		cout << '\n';
+	}*/
 }
 
 void ConvolutionLogic::generatePixelMatrix(int N, int M) {
@@ -172,4 +145,35 @@ void ConvolutionLogic::readPixelMatrixFromFile() {
 			dataIn >> pixelMatrix[i][j];
 		}
 	}
+}
+
+void ConvolutionLogic::doWork(int start, int end) {
+	for (int i = start; i < end; i++) {
+		int line = getLine(i, pixelMatrixNSize);
+		int column = getColumn(i, pixelMatrixMSize);
+		newPixelMatrix[line][column] = computeConvolution(line, column);
+	}
+}
+void ConvolutionLogic::runConvolutionMain(int noOfThreads) {
+	int border = kernelSize / 2;
+	borderMatrix(border);
+
+	//create the threads
+	vector<thread> t;
+	//split the work
+	int elements = pixelMatrixNSize * pixelMatrixMSize;
+	int start = 0, end = 0;
+	int chunk = elements / noOfThreads;
+	int remainder = elements % noOfThreads;
+	for (int i = 0; i < noOfThreads; i++) {
+		end = start + chunk + (remainder-- > 0);
+		//TODO
+		t.push_back(thread([this, start, end] {doWork(start, end); }));
+		start = end;
+	}
+
+	for (int i = 0; i < noOfThreads; i++) {
+		t[i].join();
+	}
+	writeOutputMatrixToFile();
 }

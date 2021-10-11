@@ -14,13 +14,13 @@ void runOnce(int noOfThreads, ConvolutionLogic* runner) {
     runner->run(noOfThreads);
 
     auto finish = chrono::high_resolution_clock::now();
-    cout << chrono::duration_cast<chrono::nanoseconds>(finish - start).count() << "ns\n";
+    cout << chrono::duration_cast<chrono::nanoseconds>(finish - start).count() << "\n";
 
 }
 
 int main()
 {
-    char params[10][10] = { "8","10","10","5" };
+    char params[10][10] = { "4","100","100","5" };
     int noOfThreads = atoi(params[0]);
     int N = atoi(params[1]);
     int M = atoi(params[2]);

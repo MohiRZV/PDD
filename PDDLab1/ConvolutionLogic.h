@@ -4,6 +4,7 @@
 #include <time.h>
 #include <fstream>
 #include <thread>
+#include <vector>
 using namespace std;
 class ConvolutionLogic
 {
@@ -16,6 +17,9 @@ class ConvolutionLogic
 	int newPixelMatrix[100][100];
 
 	void read();
+	int getColumn(int i, int columns) {return i % columns;}
+	int getLine(int i, int lines) {return i / lines;}
+	void doWork(int start, int end);
 	void runConvolutionMain(int noOfThreads);
 	void borderMatrix(int border);
 	
@@ -28,7 +32,6 @@ class ConvolutionLogic
 	void generateKernelMatrix(int n);
 
 	int computeConvolution(int line, int column);
-	void doWork(int start, int end);
 public:
 	void run(int noOfThreads);
 	void generateMatrixKernel(int N, int M, int n);
