@@ -140,10 +140,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ConvolutionLogic.cpp" />
+    <ClCompile Include="ConvolutionLogicDynamic.cpp" />
     <ClCompile Include="PDDLab1.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ConvolutionLogic.h" />
     <ClInclude Include="PDDLab1.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
@@ -151,6 +151,7 @@
     <Text Include="data.txt" />
     <Text Include="kernel.txt" />
     <Text Include="output.txt" />
+    <Text Include="times.txt" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="PDDLab1.rc" />

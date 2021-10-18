@@ -21,12 +21,12 @@
     <ClCompile Include="ConvolutionLogic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ConvolutionLogicDynamic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PDDLab1.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ConvolutionLogic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
@@ -37,6 +37,7 @@
     <Text Include="data.txt" />
     <Text Include="kernel.txt" />
     <Text Include="output.txt" />
+    <Text Include="times.txt" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="PDDLab1.rc">
