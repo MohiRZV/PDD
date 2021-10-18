@@ -1,5 +1,5 @@
-# PDD
-PDD labs
+# PPD
+PPD labs
 
 branches:
 
