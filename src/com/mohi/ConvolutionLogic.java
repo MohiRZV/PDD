@@ -48,7 +48,37 @@ public class ConvolutionLogic {
         runConvolutionMain(pixelMatrix, kernel, noOfThreads);
     }
 
+    void runSequential() {
+        read();
+        long startTime = System.nanoTime();
+        int border = kernel.size()/2;
+        ArrayList<ArrayList<Integer>> borderedMatrix = borderMatrix(pixelMatrix, border);
+        //readerWriter.displayMatrix(borderedMatrix);
+        ArrayList<ArrayList<Integer>> newPixelMatrix = new ArrayList<>();
+        for (int line = 0; line < pixelMatrix.size(); line++) {
+            newPixelMatrix.add(new ArrayList<>());
+            for (int column = 0; column < pixelMatrix.get(0).size(); column++) {
+                newPixelMatrix.get(line).add(-999);
+            }
+        }
+
+        for (int line = 0; line < pixelMatrix.size(); line++) {
+            for (int column = 0; column < pixelMatrix.get(0).size(); column++) {
+                newPixelMatrix.get(line).set(column, computeConvolution(borderedMatrix, kernel, line, column));
+            }
+        }
+
+        long stopTime = System.nanoTime();
+        System.out.println((double)(stopTime-startTime)/1E6);
+        try {
+            readerWriter.writeToFile(outputFile, newPixelMatrix);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void runConvolutionMain(ArrayList<ArrayList<Integer>> pixelMatrix, ArrayList<ArrayList<Integer>> kernel, int noOfThreads) throws InterruptedException {
+        long startTime = System.nanoTime();
         int border = kernel.size()/2;
         ArrayList<ArrayList<Integer>> borderedMatrix = borderMatrix(pixelMatrix, border);
         //readerWriter.displayMatrix(borderedMatrix);
@@ -83,7 +113,8 @@ public class ConvolutionLogic {
         for (int i = 0; i < noOfThreads; i++) {
             t[i].join();
         }
-
+        long stopTime = System.nanoTime();
+        System.out.println((double)(stopTime-startTime)/1E6);
         try {
             readerWriter.writeToFile(outputFile, newPixelMatrix);
         } catch (IOException e) {

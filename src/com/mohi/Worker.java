@@ -36,10 +36,10 @@ public class Worker extends Thread{
     }
 
     private int getColumn(int i) {
-        return i%newPixelMatrix.size();
+        return i%newPixelMatrix.get(0).size();
     }
 
     private int getLine(int i) {
-        return i/newPixelMatrix.size();
+        return i/newPixelMatrix.get(0).size();
     }
 }
