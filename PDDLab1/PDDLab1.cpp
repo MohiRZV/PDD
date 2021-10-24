@@ -1,17 +1,17 @@
 #include <iostream>
 #include <chrono>
-#include "ConvolutionLogic.cpp"
+//#include "ConvolutionLogic.cpp"
 #include "ConvolutionLogicDynamic.cpp"
 
 using namespace std;
 
 int main(int argc, char* argv[])
 {
-    char params[10][10] = { "10000","10","5" };
+    char params[10][10] = { "6","6","3" };
     int noOfThreads = atoi(argv[1]);
     cout << "da"<<'\n';
     bool generate = 0;
-
+    noOfThreads = 1;
     int N = atoi(params[0]);
     int M = atoi(params[1]);
     int n = atoi(params[2]);
