@@ -9,6 +9,8 @@ package com.mohi;
 public class Main {
     public static void main(String[] args) throws InterruptedException {
         System.out.println();
+        String outputFile = "D:\\An2Sem2\\PDDLab1\\src\\com\\mohi\\output.txt";
+        String checkFile = "D:\\An2Sem2\\PDDLab1\\src\\com\\mohi\\check.txt";
         String[] params = new String[]{"10000","10","5"};
         boolean generate = false;
         int noOfThreads = Integer.parseInt(args[0]);
@@ -17,11 +19,13 @@ public class Main {
         int n = Integer.parseInt(params[2]);
         if(generate) {
             ConvolutionLogic.generateMatrixKernel(N, M, n);
-        }else {
+        } else {
 
             ConvolutionLogic runner = new ConvolutionLogic();
-            if(noOfThreads>0)
+            if(noOfThreads>0) {
                 runner.run(noOfThreads);
+                //System.out.println(new PixelMatrixIO().checkContentsAreTheSame(checkFile, outputFile));
+            }
             else
                 runner.runSequential();
         }

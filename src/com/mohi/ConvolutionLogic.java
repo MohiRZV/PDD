@@ -3,11 +3,13 @@ package com.mohi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.CyclicBarrier;
 
 public class ConvolutionLogic {
     private static final String originalFile = "D:\\An2Sem2\\PDDLab1\\src\\com\\mohi\\data.txt";
     private static final String kernelFile = "D:\\An2Sem2\\PDDLab1\\src\\com\\mohi\\kernel.txt";
     private static final String outputFile = "D:\\An2Sem2\\PDDLab1\\src\\com\\mohi\\output.txt";
+    private static final String checkFile = "D:\\An2Sem2\\PDDLab1\\src\\com\\mohi\\check.txt";
     private ArrayList<ArrayList<Integer>> pixelMatrix;
     private ArrayList<ArrayList<Integer>> kernel;
     PixelMatrixIO readerWriter = new PixelMatrixIO();
@@ -21,7 +23,7 @@ public class ConvolutionLogic {
                 matrix.get(i).add(rnd.nextInt(255));
         }
         try {
-            new PixelMatrixIO().writeToFile(file, matrix);
+            new PixelMatrixIO().writeToFile(file, matrix, 0);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -36,8 +38,8 @@ public class ConvolutionLogic {
 
     private void read(){
         try {
-            pixelMatrix = readerWriter.readFromFile(originalFile);
-            kernel = readerWriter.readFromFile(kernelFile);
+            kernel = readerWriter.readFromFile(kernelFile,0);
+            pixelMatrix = readerWriter.readFromFile(originalFile, kernel.size()/2);
         } catch (IOException ex) {
             System.out.println("Something went wrong while reading the file!\n"+ex.getMessage());
         }
@@ -62,16 +64,16 @@ public class ConvolutionLogic {
             }
         }
 
-        for (int line = 0; line < pixelMatrix.size(); line++) {
-            for (int column = 0; column < pixelMatrix.get(0).size(); column++) {
-                newPixelMatrix.get(line).set(column, computeConvolution(borderedMatrix, kernel, line, column));
+        for (int line = border; line < pixelMatrix.size() - border; line++) {
+            for (int column = border; column < pixelMatrix.get(0).size() - border; column++) {
+                newPixelMatrix.get(line).set(column, computeConvolution(borderedMatrix, kernel, line-border, column-border));
             }
         }
 
         long stopTime = System.nanoTime();
         System.out.println((double)(stopTime-startTime)/1E6);
         try {
-            readerWriter.writeToFile(outputFile, newPixelMatrix);
+            readerWriter.writeToFile(checkFile, newPixelMatrix, border);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -82,41 +84,54 @@ public class ConvolutionLogic {
         int border = kernel.size()/2;
         ArrayList<ArrayList<Integer>> borderedMatrix = borderMatrix(pixelMatrix, border);
         //readerWriter.displayMatrix(borderedMatrix);
-        ArrayList<ArrayList<Integer>> newPixelMatrix = new ArrayList<>();
-        for (int line = 0; line < pixelMatrix.size(); line++) {
-            newPixelMatrix.add(new ArrayList<>());
-            for (int column = 0; column < pixelMatrix.get(0).size(); column++) {
-                newPixelMatrix.get(line).add(-999);
-            }
-        }
-//        for (int line = 0; line < pixelMatrix.size(); line++) {
-//            newPixelMatrix.add(new ArrayList<>());
-//            for (int column = 0; column < pixelMatrix.get(0).size(); column++) {
-//                newPixelMatrix.get(line).add(computeConvolution(borderedMatrix, kernel, line+border-1, column+border-1));
-//            }
-//        }
-        Thread[] t = new Worker[noOfThreads];
-        int elements = pixelMatrix.size() * pixelMatrix.get(0).size();
-        int start = 0, end = 0;
-        int chunk = elements/noOfThreads;
-        int remainder = elements%noOfThreads;
+
+        int lines = pixelMatrix.size() - border*2;
+        int columns = pixelMatrix.get(0).size() - border*2;
+        Thread[] t = new WorkerInPlace[noOfThreads];
+        int elements = lines * columns;
+        int chunk = elements / noOfThreads;
+        int start=0,end=0;
+        int remainder = elements % noOfThreads;
+        int currentIndexI = border;
+        int currentIndexJ = border;
+        CyclicBarrier barrier = new CyclicBarrier(noOfThreads);
+
         for (int i = 0; i < noOfThreads; i++) {
-            end = start+chunk;
+            int no = chunk;
             if(remainder>0){
+                no++;
                 remainder--;
-                end++;
             }
-            t[i] = new Worker(borderedMatrix, kernel, newPixelMatrix, start, end);
+
+            if(i==noOfThreads-1)
+                end=pixelMatrix.size() * pixelMatrix.get(0).size();
+            else {
+                for (int j = 0; j < no; j++) {
+
+                    //indexes.add(currentIndexI* pixelMatrix.get(0).size() + currentIndexJ);
+                    end = currentIndexI * pixelMatrix.get(0).size() + currentIndexJ;
+                    currentIndexJ++;
+                    if (currentIndexJ >= columns + border) {
+                        currentIndexJ = border;
+                        currentIndexI++;
+                    }
+                }
+            }
+            //t[i] = new Worker(borderedMatrix, kernel, newPixelMatrix, indexes);
+            t[i] = new WorkerInPlace(borderedMatrix, kernel, start, end, barrier);
             t[i].start();
-            start=end;
+
+            start = end;
         }
+
         for (int i = 0; i < noOfThreads; i++) {
             t[i].join();
         }
+
         long stopTime = System.nanoTime();
         System.out.println((double)(stopTime-startTime)/1E6);
         try {
-            readerWriter.writeToFile(outputFile, newPixelMatrix);
+            readerWriter.writeToFile(outputFile, borderedMatrix, border);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -131,42 +146,43 @@ public class ConvolutionLogic {
     }
 
     private ArrayList<ArrayList<Integer>> borderMatrix(ArrayList<ArrayList<Integer>> pixelMatrix, int border) {
-        ArrayList<ArrayList<Integer>> borderedMatrix = new ArrayList<>();
         int lines = pixelMatrix.size();
         int columns = pixelMatrix.get(0).size();
-        for (int i = 0; i < lines + border*2; i++) {
-            borderedMatrix.add(new ArrayList<>());
-        }
         //top and bottom rows
         for (int i = 0; i < border; i++) {
+            int col = 0;
             //first @border elements (corners)
             for (int j = 0; j < border; j++) {
-                borderedMatrix.get(i).add(pixelMatrix.get(0).get(0));
-                borderedMatrix.get(i + border + lines).add(pixelMatrix.get(lines-1).get(0));
+                pixelMatrix.get(i).set(col, pixelMatrix.get(border).get(border));
+                pixelMatrix.get(lines - border + i).set(col, pixelMatrix.get(lines - border - 1).get(border));
+                col++;
             }
-            for (int j = 0; j < columns; j++) {
-                borderedMatrix.get(i).add(pixelMatrix.get(0).get(j));
-                borderedMatrix.get(i + border + lines).add(pixelMatrix.get(lines-1).get(j));
+            for (int j = border; j < columns - border; j++) {
+                pixelMatrix.get(i).set(col, pixelMatrix.get(border).get(j));
+                pixelMatrix.get(lines - border + i).set(col, pixelMatrix.get(lines - border - 1).get(j));
+                col++;
             }
             //last @border elements (corners)
             for (int j = 0; j < border; j++) {
-                borderedMatrix.get(i).add(pixelMatrix.get(0).get(columns-1));
-                borderedMatrix.get(i + border + lines).add(pixelMatrix.get(lines-1).get(columns-1));
+                pixelMatrix.get(i).set(col, pixelMatrix.get(border).get(columns - border - 1));
+                pixelMatrix.get(lines - border + i).set(col, pixelMatrix.get(lines - border - 1).get(columns - border - 1));
+                col++;
             }
         }
         //fill rest of matrix
-        for (int i = 0; i < lines; i++) {
+        for (int i = border; i < lines; i++) {
+            int col=0;
             for (int j = 0; j < border; j++) {
-                borderedMatrix.get(i+border).add(pixelMatrix.get(i).get(0));
+                pixelMatrix.get(i).set(col, pixelMatrix.get(i).get(border));
+                col++;
             }
-            for (int j = 0; j < columns; j++) {
-                borderedMatrix.get(i+border).add(pixelMatrix.get(i).get(j));
-            }
+            col = columns - border;
             for (int j = 0; j < border; j++) {
-                borderedMatrix.get(i+border).add(pixelMatrix.get(i).get(columns-1));
+                pixelMatrix.get(i).set(col, pixelMatrix.get(i).get(columns - border - 1));
+                col++;
             }
         }
-        return borderedMatrix;
+        return pixelMatrix;
     }
 
 }
