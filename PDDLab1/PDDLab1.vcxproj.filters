@@ -24,6 +24,9 @@
     <ClCompile Include="ConvolutionLogicDynamic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="barrier.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PDDLab1.h">
@@ -38,6 +41,7 @@
     <Text Include="kernel.txt" />
     <Text Include="output.txt" />
     <Text Include="times.txt" />
+    <Text Include="check.txt" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="PDDLab1.rc">

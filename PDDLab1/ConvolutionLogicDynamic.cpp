@@ -7,20 +7,21 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "barrier.cpp"
 using namespace std;
 class ConvolutionLogicDynamic
 {
 	vector<vector<int>> pixelMatrix;
-	vector<vector<int>> borderedMatrix;
 	vector<vector<int>> kernel;
 	int kernelSize;
 	int pixelMatrixNSize;
 	int pixelMatrixMSize;
-	vector<vector<int>> newPixelMatrix;
+	my_barrier* barrier;
 
 	string dataFile = R"(data.txt)";
 	string kernelFile = R"(kernel.txt)";
 	string outputFile = R"(output.txt)";
+	string checkFile = R"(check.txt)";
 
 	int getColumn(int i) { return i % pixelMatrixMSize; }
 	int getLine(int i) { return i / pixelMatrixMSize; }
@@ -31,13 +32,34 @@ class ConvolutionLogicDynamic
 		readFromFile(kernel, kernelSize, kernelSize, kernelFile, 0);
 	}
 
-	int computeConvolution(int line, int column) {
+	bool isOnPadding(int l, int c) {
+		int border = kernelSize / 2;
+		return !(l >= border && l < pixelMatrixNSize - border && c >= border && c < pixelMatrixMSize - border);
+	}
+
+	int getLinearisedIndex(int line, int column) {
+		return line * pixelMatrixMSize + column;
+	}
+
+	bool isInIndexes(int l, int c, int start, int end) {
+		int linIndex = getLinearisedIndex(l, c);
+		return linIndex >= start && linIndex < end;
+	}
+
+	pair<int, bool> computeConvolution(int line, int column, int start, int end) {
 		int rez = 0;
+		bool isOnBorder = false;
 		for (int i = 0; i < kernelSize; i++)
-			for (int j = 0; j < kernelSize; j++)
-				rez = rez + pixelMatrix[line + i - kernelSize / 2][column + j - kernelSize / 2] * kernel[i][j];
-			
-		return rez;
+			for (int j = 0; j < kernelSize; j++) {
+				int l = line + i - kernelSize / 2;
+				int c = column + j - kernelSize / 2;
+				rez = rez + pixelMatrix[l][c] * kernel[i][j];
+
+				if (!isOnBorder && !isOnPadding(l, c) && !isInIndexes(l, c, start, end)) {
+					isOnBorder = true;
+				}
+			}
+		return make_pair(rez, isOnBorder);
 	}
 	void borderMatrix(int border) {
 		int lines = pixelMatrixNSize;
@@ -115,9 +137,10 @@ class ConvolutionLogicDynamic
 
 	void writeOutputMatrixToFile() {
 		ofstream pixelMatrixOut(outputFile);
-		for (int i = 0; i < pixelMatrixNSize; i++) {
-			for (int j = 0; j < pixelMatrixMSize; j++) {
-				pixelMatrixOut << newPixelMatrix[i][j] << " ";
+		int border = kernelSize / 2;
+		for (int i = border; i < pixelMatrixNSize - border; i++) {
+			for (int j = border; j < pixelMatrixMSize - border; j++) {
+				pixelMatrixOut << pixelMatrix[i][j] << " ";
 			}
 			pixelMatrixOut << "\n";
 		}
@@ -159,12 +182,43 @@ class ConvolutionLogicDynamic
 		}
 	}
 
-	void doWork(vector<int> indexes) {
-		for (int i : indexes)
+	struct triple {
+		int i, j, value;
+	};
+
+	void doWork(int start, int end) {
+		vector<triple> internalValues = vector<triple>();
+		vector<triple> fronteerValues = vector<triple>();
+		for (int i = start; i < end; i++)
 		{
+			//cout << i << ' ';
 			int line = getLine(i);
 			int column = getColumn(i);
-			newPixelMatrix[line][column] = computeConvolution(line, column);
+			if (!isOnPadding(line, column)) {
+				pair<int, bool> rez = computeConvolution(line, column, start, end);
+				int value = rez.first;
+				bool isOnBorder = rez.second;
+				triple el;
+				el.i = line;
+				el.j = column;
+				el.value = value;
+				if (isOnBorder) {
+					fronteerValues.push_back(el);
+				}
+				else {
+					internalValues.push_back(el);
+				}
+			}
+		}
+		
+		for (triple t : internalValues) {
+			pixelMatrix[t.i][t.j] = t.value;
+		}
+
+		barrier->wait();
+
+		for (triple t : fronteerValues) {
+			pixelMatrix[t.i][t.j] = t.value;
 		}
 	}
 
@@ -176,6 +230,8 @@ public:
 		read();
 		auto startTime = chrono::high_resolution_clock::now();
 		//allocate newPixelMatrix
+		vector<vector<int>> newPixelMatrix;
+
 		newPixelMatrix = vector<vector<int>>(pixelMatrixNSize);
 		for (int i = 0; i < pixelMatrixNSize; i++) {
 			newPixelMatrix[i] = vector<int>(pixelMatrixMSize);
@@ -184,20 +240,28 @@ public:
 		borderMatrix(border);
 
 		int elements = pixelMatrixNSize * pixelMatrixMSize;
-		//doWork(0, elements);
+		for (int line = border; line < pixelMatrixNSize - border; line++) {
+			for (int column = border; column < pixelMatrixMSize - border; column++) {
+				newPixelMatrix[line][column] = computeConvolution(line, column, 0, pixelMatrixMSize * pixelMatrixNSize).first;
+			}
+		}
+
 
 		auto finishTime = chrono::high_resolution_clock::now();
 
 		cout << chrono::duration_cast<chrono::nanoseconds>(finishTime - startTime).count() / 1000000.0;
-		writeOutputMatrixToFile();
+		
+		ofstream pixelMatrixOut(checkFile);
+		for (int i = border; i < pixelMatrixNSize - border; i++) {
+			for (int j = border; j < pixelMatrixMSize - border; j++) {
+				pixelMatrixOut << newPixelMatrix[i][j] << " ";
+			}
+			pixelMatrixOut << "\n";
+		}
 	}
 	void runConvolutionMain(int noOfThreads) {
 		auto startTime = chrono::high_resolution_clock::now();
-		//allocate newPixelMatrix
-		newPixelMatrix = vector<vector<int>>(pixelMatrixNSize);
-		for (int i = 0; i < pixelMatrixNSize; i++) {
-			newPixelMatrix[i] = vector<int>(pixelMatrixMSize);
-		}
+		
 		int border = kernelSize / 2;
 		borderMatrix(border);
 		//create the threads
@@ -208,25 +272,33 @@ public:
 		int elements = lines * columns;
 		int chunk = elements / noOfThreads;
 		int remainder = elements % noOfThreads;
+		int start = 0, end = 0;
 		int currentIndexI = border;
 		int currentIndexJ = border;
+		barrier = new my_barrier(noOfThreads);
+		
+
 		for (int i = 0; i < noOfThreads; i++) {
-			vector<int> indexes = vector<int>();
 			int no = chunk;
 			if (remainder > 0) {
 				no++;
 				remainder--;
 			}
-			for (int j = 0; j < no; j++) {
-				indexes.push_back(currentIndexI * pixelMatrixMSize + currentIndexJ);
-				currentIndexJ++;
-				if (currentIndexJ >= columns + border) {
-					currentIndexJ = border;
-					currentIndexI++;
+			if (i == noOfThreads-1)
+				end = pixelMatrixNSize * pixelMatrixMSize;
+			else {
+				for (int j = 0; j < no; j++) {
+					end = currentIndexI * pixelMatrixMSize + currentIndexJ;
+					currentIndexJ++;
+					if (currentIndexJ >= columns + border) {
+						currentIndexJ = border;
+						currentIndexI++;
+					}
+
 				}
-				
 			}
-			t.emplace_back([this, indexes] {doWork(indexes); });
+			t.emplace_back([this, start, end] {doWork(start, end); });
+			start = end;
 		}
 
 		for (int i = 0; i < noOfThreads; i++) {

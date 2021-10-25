@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="barrier.cpp" />
     <ClCompile Include="ConvolutionLogic.cpp" />
     <ClCompile Include="ConvolutionLogicDynamic.cpp" />
     <ClCompile Include="PDDLab1.cpp" />
@@ -148,6 +149,7 @@
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="check.txt" />
     <Text Include="data.txt" />
     <Text Include="kernel.txt" />
     <Text Include="output.txt" />
