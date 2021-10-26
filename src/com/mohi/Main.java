@@ -14,6 +14,7 @@ public class Main {
         String[] params = new String[]{"10000","10","5"};
         boolean generate = false;
         int noOfThreads = Integer.parseInt(args[0]);
+        noOfThreads = 4;
         int N = Integer.parseInt(params[0]);
         int M = Integer.parseInt(params[1]);
         int n = Integer.parseInt(params[2]);

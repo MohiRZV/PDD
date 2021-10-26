@@ -1,6 +1,9 @@
 package com.mohi;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
@@ -63,7 +66,7 @@ public class WorkerInPlace extends Thread{
         return new Pair(rez, isOnBorder);
     }
 
-    class Triple{
+    class Triple implements Comparable{
         int i;
         int j;
         int val;
@@ -73,28 +76,48 @@ public class WorkerInPlace extends Thread{
             this.j = j;
             this.val = val;
         }
+
+
+        @Override
+        public int compareTo(Object o) {
+            return 0;
+        }
     }
     @Override
     public void run() {
         // calculate the new values
-        ArrayList<Triple> internalValues = new ArrayList<>();
         ArrayList<Triple> fronteerValues = new ArrayList<>();
+        Queue<Triple> q = new LinkedList<>();
         for(int i=start;i<end;i++){
             int line = getLine(i);
             int column = getColumn(i);
+
+            // if the current element is part of the padding, skip it
             if(!isOnPadding(line, column)) {
+                // get new value for element [line][column], and if it is on a border or not
                 Pair rez = computeConvolution(line, column);
                 int value = rez.first;
                 boolean isOnBorder = rez.second;
+                // if on border
                 if (isOnBorder) {
+                    // save the value locally
                     fronteerValues.add(new Triple(line, column, value));
                 } else {
-                    internalValues.add(new Triple(line, column, value));
+                    // add the element to a queue
+                    q.add(new Triple(line, column, value));
+                    // if the queue is larger than the number of elements in the kernel
+                    if(q.size() >= kernel.size()* kernel.size()) {
+                        // the first element can be stored in the main matrix
+                        Triple t = q.poll();
+                        borderedMatrix.get(t.i).set(t.j, t.val);
+                    }
                 }
             }
         }
 
-        for(Triple t : internalValues){
+        // save the ramaining elements in the matrix
+        while(!q.isEmpty()){
+            Triple t = q.poll();
             borderedMatrix.get(t.i).set(t.j, t.val);
         }
 
