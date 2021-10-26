@@ -8,6 +8,7 @@
 #include <thread>
 #include <vector>
 #include "barrier.cpp"
+#include <queue>
 using namespace std;
 class ConvolutionLogicDynamic
 {
@@ -187,8 +188,8 @@ class ConvolutionLogicDynamic
 	};
 
 	void doWork(int start, int end) {
-		vector<triple> internalValues = vector<triple>();
 		vector<triple> fronteerValues = vector<triple>();
+		queue<triple> q;
 		for (int i = start; i < end; i++)
 		{
 			//cout << i << ' ';
@@ -206,14 +207,23 @@ class ConvolutionLogicDynamic
 					fronteerValues.push_back(el);
 				}
 				else {
-					internalValues.push_back(el);
+					q.push(el);
+					if (q.size() >= kernelSize * kernelSize) {
+						triple t = q.front();
+						q.pop();
+						pixelMatrix[t.i][t.j] = t.value;
+
+					}
 				}
 			}
 		}
-		
-		for (triple t : internalValues) {
+
+		while (!q.empty()) {
+			triple t = q.front();
+			q.pop();
 			pixelMatrix[t.i][t.j] = t.value;
 		}
+
 
 		barrier->wait();
 
