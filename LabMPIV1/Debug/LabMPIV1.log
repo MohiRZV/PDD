@@ -1,0 +1,3 @@
+﻿  LabMPIV1.cpp
+C:\Users\razva\source\repos\LabMPIV1\LabMPIV1\LabMPIV1.cpp(69,15): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+  LabMPIV1.vcxproj -> C:\Users\razva\source\repos\LabMPIV1\Debug\LabMPIV1.exe
