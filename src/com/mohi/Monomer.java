@@ -41,8 +41,8 @@ public class Monomer {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
 
             while(!polynom.isEmpty()) {
-                Monom monom = polynom.remove().i;
-                bw.write(monom.coef + " " + monom.exp);
+                Monom monom = polynom.remove().getMonom();
+                bw.write(monom.getCoef() + " " + monom.getExp());
                 bw.newLine();
             }
             bw.flush();
@@ -75,16 +75,17 @@ public class Monomer {
         while(!allMonoms.isEmpty()){
             // get monom from front of queue
             Monom monom = allMonoms.pop();
-
-            // if the current exponent was already added to the result
-            Monom exists = result.find(monom.exp);
-            if(exists!=null){
-                // just increase it's coefficient
-                exists.add(monom);
-            }else{
-                // add it
-                result.insert(monom);
-            }
+//
+//            // if the current exponent was already added to the result
+//            Monom exists = result.find(monom.getExp());
+//            if(exists!=null){
+//                // just increase it's coefficient
+//                exists.add(monom);
+//            }else{
+//                // add it
+//                result.insert(monom);
+//            }
+            result.insert(monom);
         }
     }
 

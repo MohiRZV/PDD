@@ -17,14 +17,15 @@ public class Worker extends Thread{
         while(stillHaveMonomials){
 
             Monom front = monomials.peek();
-            if (front!=null && front.exp == 0 && front.coef == 0) {
+            if (front!=null && front.getExp() == 0 && front.getCoef() == 0) {
                 stillHaveMonomials = false;
             }else {
                 // get monom from front of queue
                 Monom monom = monomials.pop();
+
                 try {
                     synchronized (queueHasElementsCondVar) {
-                        while(monom==null||(monom.exp==0&&monom.coef==0)) {
+                        while(monom==null||(monom.getCoef()==0&&monom.getExp()==0)) {
                             queueHasElementsCondVar.wait();
                             monom = monomials.pop();
                         }
@@ -33,17 +34,7 @@ public class Worker extends Thread{
                     e.printStackTrace();
                 }
 
-                if (monom != null) {
-                    // if the current exponent was already added to the result
-                    Monom exists = result.find(monom.exp);
-                    if (exists != null) {
-                        // just increase it's coefficient
-                        exists.add(monom);
-                    } else {
-                        // add it
-                        result.insert(monom);
-                    }
-                }
+                result.insert(monom);
             }
 
         }

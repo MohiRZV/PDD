@@ -2,62 +2,81 @@ package com.mohi;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-public class SortedLinkedList {
-
+class Node{
+    //data
+    private Monom monom;
+    private Node next;
     ReentrantLock lock = new ReentrantLock();
+    Node(Monom i){
+        this.monom = i;
+        this.next = null;
+    }
+
+    public Monom getMonom() {
+        Monom monom;
+        lock.lock();
+        monom = this.monom;
+        lock.unlock();
+        return monom;
+    }
+
+    public Node getNext() {
+        Node nextNode;
+        lock.lock();
+        nextNode = this.next;
+        lock.unlock();
+        return nextNode;
+    }
+
+    public void setNext(Node next) {
+        lock.lock();
+        this.next = next;
+        lock.unlock();
+    }
+}
+
+
+public class SortedLinkedList {
 
     // reference to first node
     private Node head;
+    private Node sentinelStart = new Node(new Monom(-1,-1));
+    private Node sentinelEnd = new Node(new Monom(9999,9999));
     SortedLinkedList(){
-        head = null;
-    }
-    // Class for nodes
-    static class Node{
-        //data
-        Monom i;
-        Node next;
-        Node(Monom i){
-            this.i = i;
-            this.next = null;
-        }
-    }
-
-    public Monom find(int exp){
-        lock.lock();
-        Node current = head;
-
-        while(current != null && current.i.exp != exp){
-            current = current.next;
-        }
-
-
-        if(current==null) {
-            lock.unlock();
-            return null;
-        }
-        Monom cm = current.i;
-        lock.unlock();
-        return cm;
+        //set sentinels
+        head = sentinelStart;
+        head.setNext(sentinelEnd);
     }
 
     public void insert(Monom data){
-        lock.lock();
         Node newNode = new Node(data);
 
         Node current = head;
         Node previous = null;
-        while(current != null && data.exp > current.i.exp){
+
+        current.lock.lock();
+        while(data.getExp() >= current.getMonom().getExp()){
+            if(previous!=null)
+                previous.lock.unlock();
+            current.lock.unlock();
+
             previous = current;
-            current = current.next;
+            current = current.getNext();
+
+            previous.lock.lock();
+            current.lock.lock();
         }
-        // insertion at beginning of the list
-        if(previous == null){
-            head = newNode;
-        }else{
-            previous.next = newNode;
+
+        if(previous!=null && previous.getMonom().getExp() == data.getExp()){
+            previous.getMonom().add(data);
         }
-        newNode.next = current;
-        lock.unlock();
+        else if(previous!=null)
+            previous.setNext(newNode);
+        newNode.setNext(current);
+
+        if(previous!=null)
+            previous.lock.unlock();
+        current.lock.unlock();
     }
 
     public Node remove(){
@@ -68,15 +87,12 @@ public class SortedLinkedList {
         Node temp = head;
 
 
-        head = head.next;
+        head = head.getNext();
 
         return temp;
     }
 
     public boolean isEmpty(){
-        lock.lock();
-        boolean isEmpty = (head==null);
-        lock.unlock();
-        return isEmpty;
+        return (head==null);
     }
 }
